@@ -5,7 +5,7 @@ from pypuf import *
 import time
 from typing import Dict
 import csv
-from evosax import Strategies
+from evosax import Strategies # type: ignore
 import jax
 
 # Initializing an empty list called LOG.
@@ -28,7 +28,7 @@ def run_es_loop(rng, num_steps, fit_fn, model):
 
     scan through evolution rollouts
 
-    tldr: your function should take (rng, w) as its first two parameters parameters
+     function should take (rng, w) as its first two parameters parameters
     and should not read or write from external state.
 
     this is is necessary to ensure the inner loop of the training is as efficient as possible.
@@ -723,6 +723,7 @@ def initialize_ipuf_challenge_filter(nchall, lxor,rxor, threshold):
         C1 = filter_challenges(lxor, chall, threshold)    
         
         # Calculate true responses by passing C1 to the left XOR PUF
+        # individual shape is (N, k) -- only the XOR result is used here
         true_r_individual,true_r = lxor(C1)
         R1=true_r.flatten()
         
@@ -822,13 +823,12 @@ def xor_attk(
         lrn_w,best_fitness,total_time=attack_indv_puf(C_filtered,attk_args,noise,xor,nxor,alphas)
 
         # Calculate accuracy of learned PUF on validation challenges
+        # individual shape is now (N, k) -- access arbiter j as individual[:, j]
         val_old_xor_r_individual, val_old_xor_r=xor(val_chall)
-        val_old_xor_r_individual=val_old_xor_r_individual.flatten()
         val_old_xor_r=val_old_xor_r.flatten()
 
         #Compute the learned responses of the XOR PUF to the validation challenges.
         lrn_r_individual,lrn_r = xor_get_response(lrn_w, val_chall) 
-        lrn_r_individual=lrn_r_individual.flatten()
         lrn_r=lrn_r.flatten()
 
         acc = jnp.equal(val_old_xor_r, lrn_r).mean()
@@ -836,12 +836,8 @@ def xor_attk(
         
     #This is being done to use actual challenges to use in right xor in ipuf:
     lrn_r_individual_actual_chal,lrn_r_actual_chal = xor_get_response(lrn_w, C_filtered) #Function at line 372 FuncPuf
-    lrn_r_individual_actual_chal=lrn_r_individual_actual_chal.flatten()
     lrn_r_actual_chal=lrn_r_actual_chal.flatten()
 
-    subset_length=len(val_old_xor_r_individual)/nxor
-    subset_length=int(subset_length)
-    
     # Calculate the accuracy of the learned PUF on validation challenges
     acc = jnp.equal(val_old_xor_r, lrn_r).mean() # we use the first xor instance and give it validation challenges and compare with new xor response.
     print("Accuracy",acc)
@@ -851,23 +847,14 @@ def xor_attk(
     # Calculate and store individual accuracies
     indv_acc=[]
 
-
-    # Iterate over the XOR instances
+    # Iterate over the XOR instances.
+    # individual is (N, k): column j holds all of arbiter j's responses.
     for i in range(nxor):
-        lrn_start = i * subset_length
-        lrn_end = (i + 1) * subset_length
+        lrn_r_subset = lrn_r_individual[:, i]
 
-        # Extract the lrn_r_subset
-        lrn_r_subset = lrn_r_individual[lrn_start:lrn_end]            
-        
-        # Iterate over all lrn_r_subsets
+        # Iterate over all arbiter columns of the true individual responses
         for j in range(nxor):
-            # Calculate the start and end indices for the subsets
-            start = j * subset_length
-            end = (j + 1) * subset_length
-
-        # Extract the r_subset for the current XOR instance
-            r_subset = val_old_xor_r_individual[start:end]
+            r_subset = val_old_xor_r_individual[:, j]
 
             # Calculate and print the accuracy
             this_acc = jnp.equal(r_subset, lrn_r_subset).mean()
@@ -984,8 +971,8 @@ def ipuf_attk(
     c_sample = generate_challenges(new_key(), (5000, new_challenges.shape[1]))
 
     # Compute true responses of the XOR PUF to filtered challenges
+    # individual shape is now (N, k) -- true_r_individual[:, j] is arbiter j
     true_r_individual,true_r = xor(new_filtered_challenges)
-    true_r_individual=true_r_individual.flatten()
     true_r=true_r.flatten()
  
     # Generate validation challenges
@@ -1009,39 +996,27 @@ def ipuf_attk(
         lrn_w,best_fitness,total_time=attack_indv_puf(new_filtered_challenges,attk_args,noise,xor,nxor,alphas)
 
         # Calculate accuracy on validation challenges
+        # individual shape is now (N, k) -- access arbiter j as individual[:, j]
         val_old_xor_r_individual, val_old_xor_r=xor(val_chall)
-        val_old_xor_r_individual=val_old_xor_r_individual.flatten()
         val_old_xor_r=val_old_xor_r.flatten()
 
         lrn_r_individual,lrn_r = xor_get_response(lrn_w, val_chall) 
-        lrn_r_individual=lrn_r_individual.flatten()
         lrn_r=lrn_r.flatten()
 
         acc = jnp.equal(val_old_xor_r, lrn_r).mean() 
         print("Accuracy",acc)
         overall_acc = jnp.array([acc, 1 - acc]).max()
            
-    subset_length=len(val_old_xor_r_individual)/nxor
-    subset_length=int(subset_length)
-    
     indv_acc=[]
 
-    # Iterate over the XOR instances
+    # Iterate over the XOR instances.
+    # individual is (N, k): column j holds all of arbiter j's responses.
     for i in range(nxor):
-        lrn_start = i * subset_length
-        lrn_end = (i + 1) * subset_length
+        lrn_r_subset = lrn_r_individual[:, i]
 
-        # Extract the lrn_r_subset
-        lrn_r_subset = lrn_r_individual[lrn_start:lrn_end]            
-        
-        # Iterate over all lrn_r_subsets
+        # Iterate over all arbiter columns of the true individual responses
         for j in range(nxor):
-            # Calculate the start and end indices for the subsets
-            start = j * subset_length
-            end = (j + 1) * subset_length
-
-            # Extract the r_subset for the current XOR instance
-            r_subset = val_old_xor_r_individual[start:end]            
+            r_subset = val_old_xor_r_individual[:, j]
 
             # Calculate and print the accuracy
             this_acc = jnp.equal(r_subset, lrn_r_subset).mean()
