@@ -1,0 +1,24 @@
+[MASTER]
+# Extensions that define known third-party symbols.
+# JAX, NumPy, evosax, pypuf are installed at runtime but not in this lint
+# sandbox; suppress import-error for them.
+extension-pkg-allow-list=jax,numpy,evosax,pypuf
+
+[MESSAGES CONTROL]
+# E0401 (import-error): raised when the linter cannot find a module.
+# JAX and NumPy are runtime dependencies not available in the lint
+# environment. Pylance resolves them via stubs; pylint does not.
+# R0402 (consider-using-from-import): style preference, not a defect.
+disable=
+    E0401,
+    C0103,
+
+[FORMAT]
+max-line-length=100
+
+[DESIGN]
+max-args=8
+max-positional-arguments=8
+
+[SIMILARITIES]
+min-similarity-lines=10

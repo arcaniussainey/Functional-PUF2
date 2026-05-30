@@ -1,5 +1,5 @@
 #Importing various libraries. use "pip install {lib_name}" to install the required libraries.
-
+import jax.numpy as jnp
 from Pufs.FunctionalPuf import *
 from pypuf import *
 import time
@@ -28,7 +28,7 @@ def run_es_loop(rng, num_steps, fit_fn, model):
 
     scan through evolution rollouts
 
-     function should take (rng, w) as its first two parameters parameters
+    tldr: your function should take (rng, w) as its first two parameters parameters
     and should not read or write from external state.
 
     this is is necessary to ensure the inner loop of the training is as efficient as possible.
