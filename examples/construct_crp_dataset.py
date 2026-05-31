@@ -31,7 +31,7 @@ def main() -> None:
     puf = Xor(stream.next(), dim=(3, 64))
 
     pipeline = op_pipeline(
-        op_generate_challenges(n_challenges=100_000),
+        op_generate_challenges(n_challenges=10_000),
         op_evaluate_xor_response(),
     )
 

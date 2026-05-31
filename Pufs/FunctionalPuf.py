@@ -1,8 +1,4 @@
 """
-Pufs/FunctionalPuf.py
----------------------
-Public re-export surface and concrete PUF class definitions.
-
 Contains the core PUF I/O primitives (re-exported from Pufs.primitives)
 and the Arbiter / Xor wrapper classes.
 
@@ -100,6 +96,18 @@ from Pufs.operations import (
     op_age,
     op_evaluate_response,
     op_evaluate_xor_response,
+    op_evaluate_feedforward_response,
+    op_evaluate_feedforward_xor_response,
+)
+
+from Pufs.aging import AgeRef, ArbiterPUF_Aging, XorPUF_Aging
+from Pufs.feedforward import (
+    FFLoop,
+    FF_Arbiter,
+    FF_Arbiter_Expression,
+    FF_Arbiter_Symbolic,
+    FF_XOR,
+    FF_XOR_Symbolic,
 )
 
 
@@ -135,8 +143,13 @@ __all__ = [
     "op_pipeline", "lower_operations", "register_operation", "registered_operations",
     "op_generate_weights", "op_generate_challenges", "op_add_gaussian_noise",
     "op_age", "op_evaluate_response", "op_evaluate_xor_response",
+    "op_evaluate_feedforward_response", "op_evaluate_feedforward_xor_response",
     # Base class
     "BasePUF",
+    # Extended PUF classes
+    "AgeRef", "ArbiterPUF_Aging", "XorPUF_Aging",
+    "FFLoop", "FF_Arbiter", "FF_Arbiter_Symbolic",
+    "FF_Arbiter_Expression", "FF_XOR", "FF_XOR_Symbolic",
     # Concrete classes
     "Arbiter", "Xor",
     # Module-level PRNG helpers

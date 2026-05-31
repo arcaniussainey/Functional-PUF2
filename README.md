@@ -324,3 +324,30 @@ The `examples/` directory contains small scripts for common scientific workflows
 - `02_reliability_aging_experiment.py`: response reliability after simulated aging/noise.
 - `03_seeded_xor_attack.py`: seeded XOR attack smoke test using `FunAttack_v2` and `evosax`.
 - `04_register_custom_operation.py`: how to add a custom operation without modifying the pipeline executor.
+
+## Extended PUF modules
+
+This refactor adds three first-class extension modules:
+
+- `Pufs.aging` provides `ArbiterPUF_Aging`, `XorPUF_Aging`, `AgeRef`, and drift helpers.  Aging histories are stored as contiguous JAX arrays and can be evaluated one age at a time or across all ages.
+- `Pufs.feedforward` provides `FF_Arbiter`, `FF_Arbiter_Symbolic`, `FF_Arbiter_Expression`, `FF_XOR`, and `FF_XOR_Symbolic`.  Feed-forward PUFs use a compact weight layout where row 0 is the main arbiter and rows 1..L are padded intermediate-loop weights.
+- `Pufs.statistics` provides scalar PUF quality metrics and optional plotting helpers for uniformity, inter-device distance, reliability, diffuseness, response heatmaps, and bit aliasing.
+
+The operation-spec pipeline also includes feed-forward evaluators:
+
+```python
+from Pufs.feedforward_core import required_xor_weight_rows
+from Pufs.pipeline import compose, generate_weights, generate_challenges
+from Pufs.pipeline import evaluate_feedforward_xor_response
+
+loop_specs = (((2, 20),), ((4, 24), (8, 28)), ((1, 18),))
+rows = required_xor_weight_rows(loop_specs)
+
+state = compose(
+    generate_weights(n_stages=32, k=rows),
+    generate_challenges(n_challenges=2_000),
+    evaluate_feedforward_xor_response(loop_specs),
+).run(rng, compiled=True)
+```
+
+See `examples/05_noob_pipeline_walkthrough.py` for a beginner-friendly walkthrough and `examples/12_feedforward_aging_pipeline_experiment.py` for a compiled feed-forward XOR experiment.

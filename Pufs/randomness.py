@@ -1,6 +1,4 @@
 """
-Pufs/randomness.py
-------------------
 Deterministic PRNG and distribution helpers for PUF experiments.
 
 JAX PRNG keys are explicit values.  This module provides a small, documented
@@ -136,7 +134,12 @@ class DistributionSpec:
     dtype: str = "float32"
 
     @classmethod
-    def normal(cls, loc: float = 0.0, scale: float = 1.0, dtype: str = "float32") -> "DistributionSpec":
+    def normal(
+        cls,
+        loc: float = 0.0,
+        scale: float = 1.0,
+        dtype: str = "float32",
+    ) -> "DistributionSpec":
         """Create a Gaussian distribution spec."""
         return cls(family="normal", loc=float(loc), scale=float(scale), dtype=dtype)
 

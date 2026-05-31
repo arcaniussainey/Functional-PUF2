@@ -38,7 +38,12 @@ def test_operation_specs_are_immutable_hashable_and_reject_array_params() -> Non
     """Specs should be cache-safe static data, not runtime array containers."""
     spec = op_generate_challenges(32, n_stages=16)
     assert spec.kind == "generate_challenges"
-    assert hash(spec) == hash(OperationSpec.create("generate_challenges", n_challenges=32, n_stages=16))
+    same_spec = OperationSpec.create(
+        "generate_challenges",
+        n_challenges=32,
+        n_stages=16,
+    )
+    assert hash(spec) == hash(same_spec)
 
     try:
         spec.kind = "other"  # type: ignore[misc]
@@ -143,7 +148,8 @@ def test_custom_operation_registration_extends_executor() -> None:
         op_evaluate_response(),
     )
 
-    state = lower_operations(specs, jit=True)(OperationState(rng=KEY, weight=weight, challenge=challenge))
+    initial_state = OperationState(rng=KEY, weight=weight, challenge=challenge)
+    state = lower_operations(specs, jit=True)(initial_state)
     direct = get_response(weight * 2.0, challenge)
     np.testing.assert_array_equal(state.response, direct)
 

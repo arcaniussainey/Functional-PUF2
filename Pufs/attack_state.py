@@ -1,6 +1,4 @@
 """
-Pufs/attack_state.py
---------------------
 Reusable attack-state containers for PUF attack code.
 
 These classes are deliberately lightweight.  They keep experiment state such as

@@ -75,8 +75,16 @@ def test_core_shape_contracts() -> None:
         ShapeCase("get_response xor rows", lambda: get_response(w3, c), (100, 3)),
         ShapeCase("get_delta_response", lambda: get_delta_response(w3, c), (100, 3)),
         ShapeCase("xor_get_response", lambda: xor_get_response(w3, c), ((100, 3), (100,))),
-        ShapeCase("noisy_get_response", lambda: noisy_get_response(sk_n, w1, c, jnp.float32(0.1)), ((2,), (100, 1))),
-        ShapeCase("noisy_xor_get_response", lambda: noisy_xor_get_response(sk_n, w3, c, sigma), ((2,), (100, 1))),
+        ShapeCase(
+            "noisy_get_response",
+            lambda: noisy_get_response(sk_n, w1, c, jnp.float32(0.1)),
+            ((2,), (100, 1)),
+        ),
+        ShapeCase(
+            "noisy_xor_get_response",
+            lambda: noisy_xor_get_response(sk_n, w3, c, sigma),
+            ((2,), (100, 1)),
+        ),
         ShapeCase("Arbiter.__call__", lambda: arb(c), (100, 1)),
         ShapeCase("Xor.__call__", lambda: xor_puf(c), ((100, 3), (100,))),
     ]

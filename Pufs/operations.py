@@ -11,7 +11,7 @@ Core concepts
 -------------
 OperationSpec
     Frozen, hashable description of one operation.  A spec contains only static
-    metadata like ``kind='generate_challenges'`` and ``n_challenges=1000``.
+    metadata such as ``kind='generate_challenges'`` and ``n_challenges=1000``.
     Runtime arrays such as weights and challenge matrices live in
     OperationState, not in the spec, so specs can be cached and reused safely.
 
@@ -50,6 +50,12 @@ from Pufs.primitives import (
     get_response,
     xor_get_response,
     noisy_generate_weights,
+)
+from Pufs.feedforward_core import (
+    feedforward_response_from_weight,
+    feedforward_xor_response_from_weight,
+    normalise_loops,
+    normalise_xor_loop_specs,
 )
 
 ParamValue = Any
@@ -275,7 +281,10 @@ def apply_operation(spec: OperationSpec, state: OperationState) -> OperationStat
 
 
 @lru_cache(maxsize=128)
-def _lower_specs(specs: Tuple[OperationSpec, ...], jit: bool = True) -> Callable[[OperationState], OperationState]:
+def _lower_specs(
+    specs: Tuple[OperationSpec, ...],
+    jit: bool = True,
+) -> Callable[[OperationState], OperationState]:
     """
     Lower a static operation sequence into a cached executor.
 
@@ -392,6 +401,34 @@ def op_evaluate_xor_response() -> OperationSpec:
     return OperationSpec.create("evaluate_xor_response")
 
 
+def op_evaluate_feedforward_response(loops: Iterable[Tuple[int, int]]) -> OperationSpec:
+    """Spec: evaluate a feed-forward Arbiter PUF.
+
+    The current weight must use the compact feed-forward layout: row 0 is the
+    main arbiter and rows 1..L are padded intermediate loop weights.
+    """
+    frozen_loops = tuple((int(src), int(tgt)) for src, tgt in loops)
+    return OperationSpec.create("evaluate_feedforward_response", loops=frozen_loops)
+
+
+def op_evaluate_feedforward_xor_response(
+    loop_specs: Iterable[Iterable[Tuple[int, int]]],
+) -> OperationSpec:
+    """Spec: evaluate a feed-forward XOR PUF.
+
+    ``loop_specs`` is one loop-list per XOR component.  The current weight must
+    concatenate each component's compact feed-forward weight rows.
+    """
+    frozen_specs = tuple(
+        tuple((int(src), int(tgt)) for src, tgt in component)
+        for component in loop_specs
+    )
+    return OperationSpec.create(
+        "evaluate_feedforward_xor_response",
+        loop_specs=frozen_specs,
+    )
+
+
 
 # Built-in operation handlers
 
@@ -487,6 +524,39 @@ def _apply_evaluate_xor_response(state: OperationState, spec: OperationSpec) -> 
     return replace(state, response=xor_get_response(weight, challenge))
 
 
+def _infer_stage_count(state: OperationState, op_name: str) -> int:
+    """Infer stage count from the current challenge or weight matrix."""
+    if state.challenge is not None:
+        return int(state.challenge.shape[1])
+    if state.weight is not None:
+        return int(state.weight.shape[1])
+    raise ValueError(f"{op_name}: challenge or weight must be set before validation.")
+
+
+def _apply_evaluate_feedforward_response(
+    state: OperationState,
+    spec: OperationSpec,
+) -> OperationState:
+    weight = _require_weight(state, "evaluate_feedforward_response")
+    challenge = _require_challenge(state, "evaluate_feedforward_response")
+    n_stages = _infer_stage_count(state, "evaluate_feedforward_response")
+    loops = normalise_loops(spec.get("loops"), n_stages)
+    response = feedforward_response_from_weight(weight, challenge, loops)
+    return replace(state, response=response)
+
+
+def _apply_evaluate_feedforward_xor_response(
+    state: OperationState,
+    spec: OperationSpec,
+) -> OperationState:
+    weight = _require_weight(state, "evaluate_feedforward_xor_response")
+    challenge = _require_challenge(state, "evaluate_feedforward_xor_response")
+    n_stages = _infer_stage_count(state, "evaluate_feedforward_xor_response")
+    loop_specs = normalise_xor_loop_specs(spec.get("loop_specs"), n_stages)
+    response = feedforward_xor_response_from_weight(weight, challenge, loop_specs)
+    return replace(state, response=response)
+
+
 def _validate_age(spec: OperationSpec) -> None:
     """Validate static aging parameters early."""
     if int(spec.get("n_steps")) < 0:
@@ -525,4 +595,15 @@ register_operation(
     "evaluate_xor_response",
     _apply_evaluate_xor_response,
     doc="Evaluate xor_get_response(weight, challenge).",
+)
+
+register_operation(
+    "evaluate_feedforward_response",
+    _apply_evaluate_feedforward_response,
+    doc="Evaluate a compact feed-forward Arbiter PUF.",
+)
+register_operation(
+    "evaluate_feedforward_xor_response",
+    _apply_evaluate_feedforward_xor_response,
+    doc="Evaluate compact feed-forward XOR PUF weights.",
 )

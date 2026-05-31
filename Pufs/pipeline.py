@@ -1,12 +1,5 @@
 """
-Pufs/pipeline.py
-----------------
 Compatibility pipeline DSL for PUF operations.
-
-New code should prefer :mod:`Pufs.operations`, where pipelines are immutable
-OperationSpec values lowered into cached executors.  This module preserves the
-original programmer-friendly ``compose(step, step, ...)`` API while routing the
-built-in operations through the operation-spec layer whenever possible.
 
 A PUFPipeline describes a sequence of labelled steps applied left-to-right.
 Each step transforms the pipeline's running state, which carries:
@@ -28,7 +21,7 @@ PipelineState directly and compose only OperationSpec-backed steps.
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Callable, Iterable, Optional, Tuple, Union
+from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
 
 from Pufs.primitives import PRNGKey, Weight, Challenge
 from Pufs.operations import (
@@ -40,14 +33,16 @@ from Pufs.operations import (
     op_age,
     op_evaluate_response,
     op_evaluate_xor_response,
+    op_evaluate_feedforward_response,
+    op_evaluate_feedforward_xor_response,
     op_generate_challenges,
     op_generate_weights,
 )
 
 
-# ---------------------------------------------------------------------------
+
 # Step and spec wrappers
-# ---------------------------------------------------------------------------
+
 
 class OperationStep:
     """
@@ -103,9 +98,9 @@ def _step_label(step: Step) -> str:
     return getattr(step, "__name__", repr(step))
 
 
-# ---------------------------------------------------------------------------
+
 # PUFPipeline
-# ---------------------------------------------------------------------------
+
 
 class PUFPipeline:
     """
@@ -206,9 +201,9 @@ class PUFPipeline:
         return f"PUFPipeline([{', '.join(labels)}])"
 
 
-# ---------------------------------------------------------------------------
+
 # compose() convenience constructor
-# ---------------------------------------------------------------------------
+
 
 def compose(*steps: Composable) -> PUFPipeline:
     """
@@ -228,9 +223,9 @@ def compose(*steps: Composable) -> PUFPipeline:
     return PUFPipeline(tuple(labelled))
 
 
-# ---------------------------------------------------------------------------
+
 # Step factories
-# ---------------------------------------------------------------------------
+
 
 def generate_weights(n_stages: int, k: int = 1) -> OperationStep:
     """
@@ -307,6 +302,22 @@ def evaluate_xor_response() -> OperationStep:
     Step: evaluate the XOR PUF response.
     """
     return OperationStep(op_evaluate_xor_response())
+
+
+def evaluate_feedforward_response(loops: Iterable[Sequence[int]]) -> OperationStep:
+    """
+    Step: evaluate a feed-forward Arbiter PUF from compact FF weights.
+    """
+    return OperationStep(op_evaluate_feedforward_response(loops))
+
+
+def evaluate_feedforward_xor_response(
+    loop_specs: Iterable[Iterable[Sequence[int]]],
+) -> OperationStep:
+    """
+    Step: evaluate a feed-forward XOR PUF from compact FF-XOR weights.
+    """
+    return OperationStep(op_evaluate_feedforward_xor_response(loop_specs))
 
 
 def apply(fn: Callable[[PipelineState], PipelineState], label: str = "") -> Step:

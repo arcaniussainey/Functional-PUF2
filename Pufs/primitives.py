@@ -1,6 +1,4 @@
 """
-Pufs/primitives.py
-------------------
 Pure functional JAX primitives shared by all PUF implementations.
 
 No classes, no circular imports.  Every function here is either
@@ -24,9 +22,9 @@ from jax import lax
 import jax.numpy as jnp
 
 
-# ---------------------------------------------------------------------------
+
 # Type aliases (structural -- JAX arrays are all jax.Array at runtime)
-# ---------------------------------------------------------------------------
+
 
 PRNGKey   = jax.Array   # shape (2,)
 Weight    = jax.Array   # shape (k, n)  float32
@@ -35,9 +33,9 @@ Response  = jax.Array   # shape (N, k)  uint8 in {0, 1}
 Delta     = jax.Array   # shape (N, k)  float32
 
 
-# ---------------------------------------------------------------------------
+
 # Utility shapes
-# ---------------------------------------------------------------------------
+
 
 def row_vec(x: jax.Array) -> jax.Array:
     """Reshape any array to a single row vector (1, -1)."""
@@ -49,9 +47,9 @@ def col_vec(x: jax.Array) -> jax.Array:
     return x.reshape((-1, 1))
 
 
-# ---------------------------------------------------------------------------
+
 # PRNG helpers
-# ---------------------------------------------------------------------------
+
 
 def n_new_keys(rng: PRNGKey, n: int) -> Tuple[PRNGKey, jax.Array]:
     """
@@ -70,9 +68,9 @@ def n_new_keys(rng: PRNGKey, n: int) -> Tuple[PRNGKey, jax.Array]:
     return rng, subkeys
 
 
-# ---------------------------------------------------------------------------
+
 # Challenge generation
-# ---------------------------------------------------------------------------
+
 
 @partial(jax.jit, static_argnums=(1,))
 def generate_challenges(rng: PRNGKey, dim: Tuple[int, int]) -> Challenge:
@@ -91,9 +89,9 @@ def generate_challenges(rng: PRNGKey, dim: Tuple[int, int]) -> Challenge:
     return c
 
 
-# ---------------------------------------------------------------------------
+
 # Weight generation
-# ---------------------------------------------------------------------------
+
 
 @partial(jax.jit, static_argnums=(1,))
 def generate_1weight(rng: PRNGKey, dim: int) -> Weight:
@@ -158,9 +156,9 @@ def generate_mem_weights(rng: PRNGKey, dim: Tuple[int, int], w: int = 4) -> jax.
     return jax.random.randint(rng, dim, -v, v, dtype=jnp.int8)
 
 
-# ---------------------------------------------------------------------------
+
 # Core response functions
-# ---------------------------------------------------------------------------
+
 
 @jax.jit
 def get_response(weight: Weight, challenge: Challenge) -> Response:
@@ -229,9 +227,9 @@ def xor_get_response(weight: Weight, challenge: Challenge) -> Tuple[Response, Re
     return individual, xor_r
 
 
-# ---------------------------------------------------------------------------
+
 # Noise
-# ---------------------------------------------------------------------------
+
 
 @jax.jit
 def noisy_generate_weights(
@@ -374,9 +372,9 @@ def noisy_xor_get_delta_response(
     return rng, noisy_delta
 
 
-# ---------------------------------------------------------------------------
+
 # Sigma / reliability search
-# ---------------------------------------------------------------------------
+
 
 def target_error(
     rng: PRNGKey,
