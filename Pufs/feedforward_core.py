@@ -15,7 +15,7 @@ import jax.numpy as jnp
 from jax import lax
 import numpy as np
 
-from Pufs.primitives import Challenge, Response, Weight
+from Pufs.primitives import Challenge, Response, Weight, phi_from_challenges
 
 LoopSpec = Tuple[int, int]
 LoopSpecs = Tuple[LoopSpec, ...]
@@ -99,13 +99,13 @@ def feedforward_response_from_weight(
 
     effective = challenge.astype(jnp.float32)
     for loop_index, (src, tgt) in enumerate(sorted(loops, key=lambda item: item[0])):
-        prefix_phi = suffix_product(effective[:, : src + 1])
-        loop_weight = weight[loop_index + 1, : src + 1]
+        prefix_phi = phi_from_challenges(effective[:, : src + 1])
+        loop_weight = weight[loop_index + 1, : src + 2]
         ff_delta = prefix_phi @ loop_weight
         ff_bit = jnp.where(ff_delta > 0, 1.0, -1.0).astype(effective.dtype)
         effective = effective.at[:, tgt].multiply(ff_bit)
 
-    main_phi = suffix_product(effective)
+    main_phi = phi_from_challenges(effective)
     delta = main_phi @ weight[0]
     return ((jnp.sign(delta) + 1) / 2).astype(jnp.uint8)[:, None]
 
@@ -139,8 +139,8 @@ def feedforward_xor_response_from_weight(
 
 
 def generate_weight_np(rng: np.random.Generator, n_stages: int) -> np.ndarray:
-    """Generate one additive-delay-model weight vector with NumPy."""
-    delays = (rng.standard_normal((4, n_stages - 1)) + 500.0) * 4.0
+    """Generate one paper-correct additive-delay-model weight vector with NumPy."""
+    delays = (rng.standard_normal((4, n_stages)) + 500.0) * 4.0
     first_delta = delays[0] - delays[1]
     second_delta = delays[2] - delays[3]
     shifted = np.concatenate([[0.0], (first_delta + second_delta) / 2.0])
@@ -155,6 +155,6 @@ def padded_prefix_weight(rng: np.random.Generator, prefix_len: int, n_stages: in
     if prefix_len > n_stages:
         raise ValueError("prefix_len cannot exceed n_stages.")
     prefix_weight = generate_weight_np(rng, prefix_len)
-    padded = np.zeros((n_stages,), dtype=np.float32)
-    padded[:prefix_len] = prefix_weight
+    padded = np.zeros((n_stages + 1,), dtype=np.float32)
+    padded[: prefix_len + 1] = prefix_weight
     return padded

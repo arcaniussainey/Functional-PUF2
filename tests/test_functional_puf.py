@@ -26,7 +26,7 @@ from Pufs.FunctionalPuf import (
     generate_weights, generate_challenges, generate_mem_weights,
     get_response, get_delta_response, xor_get_response,
     noisy_get_response,
-    n_new_keys, row_vec,
+    n_new_keys, row_vec, phi_from_challenges,
 )
 
 KEY = jax.random.PRNGKey(0)
@@ -38,14 +38,14 @@ KEY = jax.random.PRNGKey(0)
 
 @pytest.fixture(scope="module")
 def w1x32() -> jax.Array:
-    """Single arbiter weight (1, 32)."""
+    """Single 32-stage arbiter weight (1, 33)."""
     _, sk = jax.random.split(KEY)
     return generate_weights(sk, (1, 32))
 
 
 @pytest.fixture(scope="module")
 def w3x32() -> jax.Array:
-    """Three-arbiter weight (3, 32)."""
+    """Three 32-stage arbiter weight (3, 33)."""
     _, sk = jax.random.split(KEY)
     return generate_weights(sk, (3, 32))
 
@@ -183,9 +183,9 @@ class TestDriftWeights:
     """Pin generate_weights behaviour."""
 
     def test_shape(self) -> None:
-        """Output shape must match (k, n)."""
+        """Output shape must include the Arbiter bias coordinate."""
         _, sk = jax.random.split(KEY)
-        assert generate_weights(sk, (3, 64)).shape == (3, 64)
+        assert generate_weights(sk, (3, 64)).shape == (3, 65)
 
     def test_dtype(self) -> None:
         """dtype must be float32."""
@@ -236,14 +236,15 @@ class TestDriftGetResponse:
         )
 
     def test_formula(self) -> None:
-        """Response formula: sign(w·c) > 0 must match integer dot-product check."""
+        """Response formula must use Phi(C), not raw challenge bits."""
         sk1, sk2 = jax.random.split(KEY, 2)
         w_mat = generate_weights(sk1, (2, 8))
-        chall = generate_challenges(sk2, (5, 8)).astype(jnp.float32)
+        chall = generate_challenges(sk2, (5, 8))
+        phi = phi_from_challenges(chall)
         resp = get_response(w_mat, chall)
         for i in range(5):
             for j in range(2):
-                assert int(resp[i, j]) == int(np.dot(np.array(w_mat[j]), np.array(chall[i])) > 0)
+                assert int(resp[i, j]) == int(np.dot(np.array(w_mat[j]), np.array(phi[i])) > 0)
 
     def test_balanced(self, w1x32: jax.Array) -> None:
         """Response fraction should be near 0.5 for a typical weight."""
@@ -264,10 +265,10 @@ class TestDriftDeltaResponse:
         assert jnp.issubdtype(get_delta_response(w1x32, c100x32).dtype, jnp.floating)
 
     def test_sign_consistent(self, w3x32: jax.Array, c100x32: jax.Array) -> None:
-        """delta > 0.5 must agree with binary response."""
+        """delta > 0 must agree with binary response."""
         delta = get_delta_response(w3x32, c100x32)
-        resp  = get_response(w3x32, c100x32)
-        np.testing.assert_array_equal(np.array(delta > 0.5), np.array(resp))
+        resp = get_response(w3x32, c100x32)
+        np.testing.assert_array_equal(np.array(delta > 0), np.array(resp))
 
 
 class TestDriftXorGetResponse:
@@ -334,9 +335,9 @@ class TestDriftArbiter:
     """Pin Arbiter class behaviour."""
 
     def test_weight_shape(self) -> None:
-        """Weight must have shape (1, 64)."""
+        """Weight must include one bias coordinate beyond 64 challenge stages."""
         _, sk = jax.random.split(KEY)
-        assert Arbiter(sk, (1, 64)).weight.shape == (1, 64)
+        assert Arbiter(sk, (1, 64)).weight.shape == (1, 65)
 
     def test_call_equals_get_response(self, c100x32: jax.Array) -> None:
         """__call__ must equal get_response."""
@@ -374,9 +375,9 @@ class TestDriftXor:
     """Pin Xor class behaviour."""
 
     def test_weight_shape(self) -> None:
-        """Weight must have shape (3, 64)."""
+        """Each XOR component weight must include the bias coordinate."""
         _, sk = jax.random.split(KEY)
-        assert Xor(sk, (3, 64)).weight.shape == (3, 64)
+        assert Xor(sk, (3, 64)).weight.shape == (3, 65)
 
     def test_response_is_tuple(self, c100x32: jax.Array) -> None:
         """get_response must return a 2-tuple."""
@@ -391,11 +392,11 @@ class TestDriftXor:
         np.testing.assert_array_equal(xor_puf(c100x32)[1], xor_puf.get_response(c100x32)[1])
 
     def test_get_weight_shape(self) -> None:
-        """get_weight(i) must return shape (1, n)."""
+        """get_weight(i) must return shape (1, n + 1)."""
         _, sk = jax.random.split(KEY)
         xor_puf = Xor(sk, (3, 32))
         for i in range(3):
-            assert xor_puf.get_weight(i).shape == (1, 32)
+            assert xor_puf.get_weight(i).shape == (1, 33)
 
     def test_pytree_roundtrip(self) -> None:
         """Pytree flatten/unflatten must preserve weights."""

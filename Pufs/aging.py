@@ -47,13 +47,16 @@ class AgingPUFProtocol(Protocol):
 
 def to_phi(challenges: Challenge) -> jax.Array:
     """
-    Convert challenges from ``{-1, +1}`` into suffix-product feature vectors.
+    Convert challenges from ``{-1, +1}`` into Arbiter feature vectors.
 
-    ``phi[i]`` is the product of challenge bits ``i`` through ``n - 1``.  The
-    helper is useful for explicit aging experiments that repeatedly evaluate the
-    same challenge matrix against many weight snapshots.
+    The variable coordinates are suffix products and the final coordinate is
+    the constant term required by the additive-delay Arbiter model.  The helper
+    is useful for explicit aging experiments that repeatedly evaluate the same
+    challenge matrix against many weight snapshots.
     """
-    return jnp.cumprod(challenges[:, ::-1], axis=1)[:, ::-1].astype(jnp.float32)
+    variable = jnp.cumprod(challenges[:, ::-1], axis=1)[:, ::-1].astype(jnp.float32)
+    bias = jnp.ones((challenges.shape[0], 1), dtype=jnp.float32)
+    return jnp.hstack([variable, bias])
 
 
 def clear_phi_cache() -> None:

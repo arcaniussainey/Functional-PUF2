@@ -53,7 +53,7 @@ class BasePUF(abc.ABC):
     weights is not recommended.
 
     The dim init param should be a tuple describing the shape of the
-    weights matrix, e.g. (1, 64) for Arbiter or (3, 64) for a 3-XOR PUF.
+    weights matrix, e.g. (1, 64) for a 64-stage Arbiter or (3, 64) for a 3-XOR PUF; generated Arbiter weights have one additional bias coordinate.
     """
 
     def __init__(self, rng: PRNGKey, dim: Tuple[int, int]) -> None:
@@ -101,7 +101,7 @@ class BasePUF(abc.ABC):
         (single arbiter sign, XOR reduce, feed-forward injection, etc.).
 
         Args:
-            weight (Weight): weight matrix, shape (k, n)
+            weight (Weight): weight matrix, shape (k, n + 1)
             challenge (Challenge): challenge matrix, shape (N, n)
 
         Returns:

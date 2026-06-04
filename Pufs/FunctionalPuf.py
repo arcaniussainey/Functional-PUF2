@@ -5,7 +5,7 @@ and the Arbiter / Xor wrapper classes.
 Assumptions
 -----------
 * If you see ``rng`` as a parameter it expects a fresh JAX PRNG key.
-* Everything is a row vector: a single weight with 64 stages has shape (1, 64).
+* Everything is a row vector: a single 64-stage arbiter has weight shape (1, 65).
 * For challenges, a single row is one challenge set.
 
 PRNG key generation is done through two functions:
@@ -61,6 +61,9 @@ from Pufs.primitives import (
     col_vec,
     n_new_keys,
     generate_challenges,
+    phi_from_challenges,
+    linear_get_response,
+    linear_get_delta_response,
     generate_1weight,
     generate_weights,
     generate_mem_weights,
@@ -124,7 +127,9 @@ __all__ = [
     # PRNG helpers
     "n_new_keys",
     # Challenge generation
-    "generate_challenges",
+    "generate_challenges", "phi_from_challenges",
+    # Explicit feature-space response functions
+    "linear_get_response", "linear_get_delta_response",
     # Weight generation
     "generate_1weight", "generate_weights", "generate_mem_weights",
     # Response functions

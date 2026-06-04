@@ -83,7 +83,7 @@ class OperationState:
         Current PRNG key. Stochastic operations consume this and return a new
         state with an advanced key.
     weight:
-        Current weight matrix, usually shape ``(k, n_stages)``.
+        Current weight matrix, usually shape ``(k, n_stages + 1)`` for Arbiter-family PUFs.
     challenge:
         Current challenge matrix, usually shape ``(n_challenges, n_stages)``.
     response:
@@ -459,7 +459,7 @@ def _apply_generate_challenges(state: OperationState, spec: OperationSpec) -> Op
     n_stages = spec.get("n_stages", None)
     if n_stages is None:
         weight = _require_weight(state, "generate_challenges")
-        n_stages = weight.shape[1]
+        n_stages = weight.shape[1] - 1
     rng, sk = jax.random.split(state.rng)
     challenge = _prim_generate_challenges(sk, (n_challenges, int(n_stages)))
     return replace(state, rng=rng, challenge=challenge)
@@ -525,11 +525,11 @@ def _apply_evaluate_xor_response(state: OperationState, spec: OperationSpec) -> 
 
 
 def _infer_stage_count(state: OperationState, op_name: str) -> int:
-    """Infer stage count from the current challenge or weight matrix."""
+    """Infer challenge-stage count from the current challenge or weight matrix."""
     if state.challenge is not None:
         return int(state.challenge.shape[1])
     if state.weight is not None:
-        return int(state.weight.shape[1])
+        return int(state.weight.shape[1]) - 1
     raise ValueError(f"{op_name}: challenge or weight must be set before validation.")
 
 

@@ -68,8 +68,8 @@ def test_core_shape_contracts() -> None:
     sigma = jnp.array([0.1, 0.2, 0.3], dtype=jnp.float32)
 
     cases = [
-        ShapeCase("generate_weights single", lambda: w1, (1, 32)),
-        ShapeCase("generate_weights xor", lambda: w3, (3, 32)),
+        ShapeCase("generate_weights single", lambda: w1, (1, 33)),
+        ShapeCase("generate_weights xor", lambda: w3, (3, 33)),
         ShapeCase("generate_challenges", lambda: c, (100, 32)),
         ShapeCase("get_response single", lambda: get_response(w1, c), (100, 1)),
         ShapeCase("get_response xor rows", lambda: get_response(w3, c), (100, 3)),

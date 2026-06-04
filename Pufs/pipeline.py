@@ -229,7 +229,7 @@ def compose(*steps: Composable) -> PUFPipeline:
 
 def generate_weights(n_stages: int, k: int = 1) -> OperationStep:
     """
-    Step: generate a ``(k, n_stages)`` weight matrix from the current rng.
+    Step: generate a ``(k, n_stages + 1)`` Arbiter weight matrix.
     """
     return OperationStep(op_generate_weights(n_stages=n_stages, k=k))
 
@@ -253,7 +253,7 @@ def generate_challenges(n_challenges: int, n_stages: Optional[int] = None) -> Op
     """
     Step: generate an ``(N, n_stages)`` challenge matrix from the current rng.
 
-    If n_stages is None, it is inferred from state.weight.shape[1].
+    If n_stages is None, it is inferred from the current Arbiter weight width.
     """
     return OperationStep(op_generate_challenges(n_challenges=n_challenges, n_stages=n_stages))
 
